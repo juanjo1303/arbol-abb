@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Árbol Binario — Visualizador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/gojs@2.3.11/release/go.js"></script>
+    <style>
+        :root {
+            --cream:   #FFF8F0;
+            --teal:    #9DD9D2;
+            --yellow:  #F4D06F;
+            --orange:  #FF8811;
+            --ink:     #1a1a1a;
+            --muted:   #7a6f65;
+            --surface: #ffffff;
+            --border:  #e8e0d6;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--cream);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--ink);
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        .site-header {
+            background: var(--ink);
+            padding: 18px 40px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .site-header .tree-icon {
+            width: 36px; height: 36px;
+            background: var(--orange);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .site-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.25rem;
+            color: var(--cream);
+            letter-spacing: 0.01em;
+        }
+        .site-header .subtitle {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--teal);
+            margin-top: 1px;
+        }
+
+        /* ── LAYOUT ── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 24px;
+            padding: 28px 32px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* ── PANEL (left sidebar) ── */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-block {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+        }
+
+        .card-block .section-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 16px;
+        }
+
+        /* ── FORMS ── */
+        .action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-row input[type="number"] {
+            flex: 1;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--ink);
+            background: var(--cream);
+            outline: none;
+            transition: border-color 0.15s;
+            -moz-appearance: textfield;
+        }
+        .input-row input[type="number"]::-webkit-inner-spin-button,
+        .input-row input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+        .input-row input[type="number"]:focus {
+            border-color: var(--orange);
+        }
+
+        .btn-action {
+            border: none;
+            border-radius: 10px;
+            width: 40px; height: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.1s, filter 0.15s;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-action:active { transform: scale(0.93); }
+        .btn-action.insert  { background: var(--teal);   color: var(--ink); }
+        .btn-action.search  { background: var(--yellow);  color: var(--ink); }
+        .btn-action.delete  { background: var(--orange);  color: #fff; }
+
+        .btn-clear {
+            margin-top: 4px;
+            display: block;
+            width: 100%;
+            padding: 9px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            background: transparent;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            color: var(--muted);
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .btn-clear:hover {
+            background: #ffe5e5;
+            color: #c0392b;
+            border-color: #f5c6c6;
+        }
+
+        /* ── PROPERTIES ── */
+        .props-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .prop-chip {
+            background: var(--cream);
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+        }
+        .prop-chip .prop-label {
+            font-size: 0.65rem;
+            font-family: 'DM Mono', monospace;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .prop-chip .prop-value {
+            font-size: 1.25rem;
+            font-family: 'DM Serif Display', serif;
+            color: var(--ink);
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+        .prop-wide {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .prop-wide .divider {
+            width: 1px; height: 24px;
+            background: var(--border);
+        }
+
+        /* ── ALERT ── */
+        .alert-bar {
+            grid-column: 1 / -1;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .alert-success { background: #d4f7f3; color: #0a5e57; border: 1px solid #9DD9D2; }
+        .alert-warning  { background: #fef9e7; color: #7a6000; border: 1px solid #F4D06F; }
+        .alert-danger   { background: #ffe8d5; color: #8a3200; border: 1px solid #FF8811; }
+        .alert-info     { background: #e8f4fb; color: #1a4f6e; border: 1px solid #a0cfe8; }
+        .alert-bar button { background: none; border: none; cursor: pointer; font-size: 1rem; color: inherit; opacity: 0.6; }
+        .alert-bar button:hover { opacity: 1; }
+
+        /* ── DIAGRAM AREA ── */
+        .diagram-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .diagram-card {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .diagram-card-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .diagram-card-header .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+        .diagram-card-header .dot-orange { background: var(--orange); }
+        .diagram-card-header .dot-teal   { background: var(--teal); }
+        .diagram-card-header .dot-yellow { background: var(--yellow); }
+        .diagram-card-header span {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-left: 4px;
+        }
+
+        #myDiagramDiv {
+            width: 100%;
+            height: 420px;
+            background-color: var(--cream);
+        }
+
+        /* ── TRAVERSALS ── */
+        .traversals-card {
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+        }
+
+        .traversal-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .traversal-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .traversal-row:first-child { padding-top: 0; }
+
+        .traversal-tag {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.68rem;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .tag-in   { background: var(--teal);   color: #0a4a46; }
+        .tag-pre  { background: var(--yellow);  color: #5a4400; }
+        .tag-post { background: var(--orange);  color: #fff; }
+
+        .badge-node {
+            display: inline-block;
+            font-family: 'DM Mono', monospace;
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin: 2px 2px;
+            background: var(--cream);
+            border: 1px solid var(--border);
+            color: var(--ink);
+        }
+        .badge-nodes-wrap { flex: 1; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; padding: 16px; }
+            .site-header { padding: 14px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="tree-icon">🌳</div>
+    <div>
+        <h1>Árbol Binario</h1>
+        <div class="subtitle">BST · Visualizador de operaciones</div>
+    </div>
+</header>
+
+<div class="main-grid">
+
+    <!-- ALERT -->
+    <div th:if="${message}" th:class="'alert-bar alert-' + ${alertType}" role="alert">
+        <span th:text="${message}"></span>
+        <button type="button" onclick="this.parentElement.remove()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <!-- LEFT PANEL -->
+    <aside class="panel">
+
+        <div class="card-block">
+            <div class="section-label">Operaciones</div>
+            <div class="action-group">
+
+                <form th:action="@{/insert}" method="post">
+                    <div class="input-row">
+                        <input type="number" name="val" placeholder="Insertar nodo" required>
+                        <button class="btn-action insert" type="submit" title="Insertar">＋</button>
+                    </div>
+                </form>
+
+                <form th:action="@{/search}" method="post">
+                    <div class="input-row">
+                        <input type="number" name="val" placeholder="Buscar / Nivel" required>
+                        <button class="btn-action search" type="submit" title="Buscar">⌕</button>
+                    </div>
+                </form>
+
+                <form th:action="@{/delete}" method="post">
+                    <div class="input-row">
+                        <input type="number" name="val" placeholder="Eliminar nodo" required>
+                        <button class="btn-action delete" type="submit" title="Eliminar">✕</button>
+                    </div>
+                </form>
+
+                <a th:href="@{/clear}" class="btn-clear">Borrar árbol completo</a>
+            </div>
+        </div>
+
+        <div class="card-block">
+            <div class="section-label">Propiedades</div>
+            <div class="props-grid">
+                <div class="prop-chip">
+                    <div class="prop-label">Peso</div>
+                    <div class="prop-value" th:text="${size}">0</div>
+                </div>
+                <div class="prop-chip">
+                    <div class="prop-label">Altura</div>
+                    <div class="prop-value" th:text="${height}">0</div>
+                </div>
+                <div class="prop-chip">
+                    <div class="prop-label">Hojas</div>
+                    <div class="prop-value" th:text="${leaves}">0</div>
+                </div>
+                <div class="prop-chip prop-wide">
+                    <div>
+                        <div class="prop-label">Menor</div>
+                        <div class="prop-value" th:text="${min != null ? min.getData() : '∅'}">∅</div>
+                    </div>
+                    <div class="divider"></div>
+                    <div>
+                        <div class="prop-label">Mayor</div>
+                        <div class="prop-value" th:text="${max != null ? max.getData() : '∅'}">∅</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- RIGHT: DIAGRAM + TRAVERSALS -->
+    <div class="diagram-col">
+
+        <div class="diagram-card">
+            <div class="diagram-card-header">
+                <div class="dot dot-orange"></div>
+                <div class="dot dot-teal"></div>
+                <div class="dot dot-yellow"></div>
+                <span>Representación visual · GoJS TreeLayout</span>
+            </div>
+            <div id="myDiagramDiv"></div>
+        </div>
+
+        <div class="traversals-card">
+            <div class="section-label" style="margin-bottom:14px;">Recorridos</div>
+
+            <div class="traversal-row">
+                <span class="traversal-tag tag-in">Inorden</span>
+                <div class="badge-nodes-wrap">
+                    <span th:each="d : ${inOrder}" class="badge-node" th:text="${d}"></span>
+                </div>
+            </div>
+            <div class="traversal-row">
+                <span class="traversal-tag tag-pre">Preorden</span>
+                <div class="badge-nodes-wrap">
+                    <span th:each="d : ${preOrder}" class="badge-node" th:text="${d}"></span>
+                </div>
+            </div>
+            <div class="traversal-row">
+                <span class="traversal-tag tag-post">Postorden</span>
+                <div class="badge-nodes-wrap">
+                    <span th:each="d : ${postOrder}" class="badge-node" th:text="${d}"></span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script th:inline="javascript">
+    function initTree() {
+        const $ = go.GraphObject.make;
+
+        myDiagram = $(go.Diagram, "myDiagramDiv", {
+            allowCopy: false,
+            allowDelete: false,
+            allowMove: false,
+            layout: $(go.TreeLayout, {
+                angle: 90,
+                layerSpacing: 50,
+                nodeSpacing: 40,
+                alignment: go.TreeLayout.AlignmentCenterChildren,
+                compaction: go.TreeLayout.CompactionStandard,
+                sorting: go.TreeLayout.SortingAscending
+            })
+        });
+
+        myDiagram.nodeTemplate =
+            $(go.Node, "Auto",
+                $(go.Shape, "Circle", {
+                    fill: "#FFF8F0",
+                    stroke: "#FF8811",
+                    strokeWidth: 2,
+                    desiredSize: new go.Size(40, 40)
+                }),
+                $(go.TextBlock, { margin: 2, stroke: "#1a1a1a", font: "500 12px 'DM Mono', monospace" },
+                    new go.Binding("text"))
+            );
+
+        myDiagram.linkTemplate =
+            $(go.Link, { routing: go.Link.Normal, corner: 5 },
+                $(go.Shape, { strokeWidth: 1.5, stroke: "#9DD9D2" })
+            );
+
+        const nodeDataArray = JSON.parse([[${treeJsonData}]]);
+        myDiagram.model = new go.TreeModel(nodeDataArray);
+    }
+
+    window.addEventListener('DOMContentLoaded', initTree);
+</script>
+
+</body>
+</html>
